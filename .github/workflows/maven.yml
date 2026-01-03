@@ -1,0 +1,46 @@
+# This workflow will build a Java project with Maven, and cache/restore any dependencies to improve the workflow execution time
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-java-with-maven
+
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+name: CI Pipeline
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        distribution: [temurin, zulu, oracle]
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v3
+
+      - name: Configurar JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: '21'
+          distribution: ${{ matrix.distribution }}
+
+      - name: Instalar dependências
+        run: mvn install -DskipTests
+
+      - name: Rodar testes com cobertura
+        run: mvn test jacoco:report
+
+      - name: Verificar cobertura mínima (60%)
+        run: mvn jacoco:check -Djacoco.check.minimum=0.6
+
+      - name: Verificar dependências vulneráveis
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: 'MeuProjeto'
+          path: '.'
+          format: 'HTML'
